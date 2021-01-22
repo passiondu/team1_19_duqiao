@@ -89,24 +89,22 @@ decl_module! {
                 Self::deposit_event(RawEvent::ClaimRevoked(sender,claim));
                 Ok(())
                
-        }
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-		//#[weight = 10_000 + T::DbWeight::get().writes(1)]
-		//pub fn do_something(origin, something: u32) -> dispatch::DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://substrate.dev/docs/en/knowledgebase/runtime/origin
-			//let who = ensure_signed(origin)?;
-
-			// Update storage.
-			//Something::put(something);
-
-			// Emit an event.
-			//Self::deposit_event(RawEvent::SomethingStored(something, who));
-			// Return a successful DispatchResult
-			//Ok(())
 		}
+		
+		#[weight = 10_000]
+        fn transfer_claim(origin, proof: Vec<u8>,sender: T::AccountId)
+        {
+            let owner = ensure_signed(origin)?;
+            let (get,_) = <Proofs<T>>::get(&proof);
+            ensure!(get == owner, Error::<T>::NotProofOwner);
+            ensure!(<Proofs<T>>::contains_key(&proof), Error::<T>::NoSuchProof);
+            ensure!(sender != owner, Error::<T>::SameOwner);
+
+            <Proofs<T>>::remove(&proof);
+            <Proofs<T>>::insert(&proof, (&sender, <frame_system::Module<T>>::block_number()) );
+
+            Self::deposit_event(RawEvent::ClaimTransfer(owner,sender, proof));
+        }
 
 		/// An example dispatchable that may throw a custom error.
 		#[weight = 10_000 + T::DbWeight::get().reads_writes(1,1)]
